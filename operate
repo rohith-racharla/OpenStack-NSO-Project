@@ -138,7 +138,7 @@ while true; do
         configure_web_nodes "$ssh_key_name"
         echo "$(date) Initializing Ansible playbook"
         sleep 5
-        ansible-playbook -i hosts --user='root' --ssh-extra-args='-p 22 -o ConnectionAttempts=20 -o StrictHostKeyChecking=no' configure.yaml
+        ansible-playbook -i hosts --user='root' --ssh-extra-args='-p 22 -o ConnectionAttempts=20 -o StrictHostKeyChecking=no' operate_configure.yaml
 
     elif ((desired_node_count < active_node_count)); then
         [[ -f "$ssh_config_file" ]] && rm "$ssh_config_file"
@@ -162,7 +162,7 @@ while true; do
             configure_web_nodes "$ssh_key_name"
             echo "$(date) Initializing Ansible playbook"
             sleep 5
-            ansible-playbook -i hosts --user='root' --ssh-extra-args='-p 22 -o ConnectionAttempts=20 -o StrictHostKeyChecking=no' configure.yaml
+            ansible-playbook -i hosts --user='root' --ssh-extra-args='-p 22 -o ConnectionAttempts=20 -o StrictHostKeyChecking=no' operate_configure.yaml
         fi
     else
         echo "$(date) Desired number of servers ($desired_node_count) already present"
