@@ -40,7 +40,7 @@ create_keypair() {
         echo "$(date) $keypair_name already exists"
     else
         echo "$(date) creating $keypair_name"
-        openstack keypair create --public-key "$ssh_key_file.pub" "$keypair_name"
+        openstack keypair create --public-key "$ssh_key_file" "$keypair_name"
         echo "$(date) $keypair_name created"
     fi
 }
