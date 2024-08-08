@@ -300,6 +300,7 @@ echo "   StrictHostKeyChecking no" >> "$sshconfig"
 echo "   PasswordAuthentication no ">> "$sshconfig"
 echo "   ProxyJump $bastion" >> "$sshconfig"
 
+#Generate hosts file
 echo "$(date) Generating hosts file"
 echo " " >> "$inventory_file"
 echo "[bastion]" >> "$inventory_file"
