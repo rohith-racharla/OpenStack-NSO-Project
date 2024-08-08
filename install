@@ -35,7 +35,7 @@ inventory_file="hosts"
 [[ -f "$known_hosts" ]] && rm "$known_hosts"
 [[ -f "$inventory_file" ]] && rm "$inventory_file"
 
-#Function to create keypair
+#Keypair
 existing_keypairs=$(openstack keypair list -f value --column Name)
 if ! grep -qFx "$keypair" <<< "$existing_keypairs"; then
     keypair_create=$(openstack keypair create --public-key "$ssh_public" "$keypair")
@@ -44,7 +44,7 @@ else
     echo "$(date) $keypair already exists"
 fi
 
-#Function to create network
+#Network
 existing_networks=$(openstack network list -f value --column Name)
 if ! grep -qFx "$network" <<< "$existing_networks"; then
     network_create=$(openstack network create --tag "$tag" "$network" -f json)
@@ -53,7 +53,7 @@ else
     echo "$(date) $network already exists"
 fi
 
-#Funtion to create subnet
+#Subnet
 existing_subnets=$(openstack subnet list -f value --column Name)
 if ! grep -qFx "$subnet" <<< "$existing_subnets"; then
     subnet_create=$(openstack subnet create --tag "$tag" --network "$network" --subnet-range 10.0.1.0/27 --gateway 10.0.1.1 "$subnet")
@@ -62,7 +62,7 @@ else
     echo "$(date) $subnet already exists"
 fi
 
-#Function to create router
+#Router
 existing_routers=$(openstack router list -f value --column Name)
 if ! grep -qFx "$router" <<< "$existing_routers"; then
     router_create=$(openstack router create --tag "$tag" "$router")
@@ -74,7 +74,7 @@ else
     echo "$(date) $router already exists"
 fi
 
-#Function to create security group
+#Security group
 existing_secgrps=$(openstack security group list -f value --column Name)
 if echo "$existing_secgrps" | grep -qFx "$securitygroup"; then
     echo "$(date) $securitygroup already exists"
@@ -95,7 +95,7 @@ else
     echo "$(date) Security group created successfully"
 fi
 
-#Function to create floating IPs
+#Floating IPs
 floating_ip_present=$(openstack floating ip list -c 'Floating IP Address' -f value)
 openstack floating ip list -c 'Floating IP Address' -f value > unused
 line_count=$(wc -l < unused)
@@ -140,7 +140,7 @@ else
     echo "$(date) $f2 for HAproxy(s)"
 fi
 
-# To create virtual IP port
+#Virtual IP port
 existing_ports=$(openstack port list --network "$network" -f value --column Name)
 if grep -qFx "$vip_port" <<< "$existing_ports"; then
     echo "$(date) Virtual port $vip_port already exists"
@@ -300,7 +300,7 @@ echo "   StrictHostKeyChecking no" >> "$sshconfig"
 echo "   PasswordAuthentication no ">> "$sshconfig"
 echo "   ProxyJump $bastion" >> "$sshconfig"
 
-#Generate hosts file
+# Generate hosts file
 echo "$(date) Generating hosts file"
 echo " " >> "$inventory_file"
 echo "[bastion]" >> "$inventory_file"
