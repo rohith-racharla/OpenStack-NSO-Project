@@ -1,173 +1,185 @@
 #!/bin/bash
 
-# Define variables
-cloud_credentials="$1"
-resource_tag="$2"
-ssh_key_file="$3"
-ssh_key_name="${ssh_key_file%.pub}"
-current_datetime=$(date)
+datetime=$(date)
+openrc=$1
+tag=$2
+ssh_public=$3
+ssh_private=${ssh_public%.pub}
 
-chmod 600 $ssh_key_file
+source "$openrc"
+chmod 600 "$ssh_private"
+chmod 600 "$ssh_private"
 
-# Print start message
-echo "$current_datetime Starting the operate sequence..."
-source "$cloud_credentials"
+echo "$(date) Starting the operate sequence"
 
-
-# Define resource names based on resource tag
-network_name="${resource_tag}_network"
-subnet_name="${resource_tag}_subnet"
-keypair_name="${resource_tag}_key"
-router_name="${resource_tag}_router"
-security_group_name="${resource_tag}_securitygroup"
-load_balancer1="${resource_tag}_HAproxy"
-load_balancer2="${resource_tag}_HAproxy2"
-bastion_host="${resource_tag}_bastion"
-web_nodes="${resource_tag}_dev"
-virtual_ip_port="${resource_tag}_vip"
-ssh_config_file="${resource_tag}_config"
+# Variables
+network="${tag}_network"
+subnet="${tag}_subnet"
+keypair="${tag}_keypair"
+router="${tag}_router"
+securitygroup="${tag}_securitygroup"
+proxy1="${tag}_HAproxy1"
+proxy2="${tag}_HAproxy2"
+bastion="${tag}_bastion"
+nodes="${tag}_dev"
+vip_port="${tag}_vip"
+sshconfig="${tag}_config"
 known_hosts_file="known_hosts"
 inventory_file="hosts"
-bastion_floating_ip="$(cat floating1)"
-node_count="$(cat node_count.txt)"
+f1="$(cat floating1)"
+count_nodes="$(cat node_count.txt)"
 
-# Function to configure web nodes
-configure_web_nodes() {
-    active_web_nodes=$(openstack server list --status ACTIVE -f value -c Name | grep -oP "$web_nodes([1-9]+)")
-    for node in $active_web_nodes; do
-        node_ip=$(openstack server list --name $node -c Networks -f value | grep -Po '\d+\.\d+\.\d+\.\d+')
-        echo " " >> "$ssh_config_file"
-        echo "Host $node" >> "$ssh_config_file"
-        echo "   User ubuntu" >> "$ssh_config_file"
-        echo "   HostName $node_ip" >> "$ssh_config_file"
-        echo "   IdentityFile $PWD/$ssh_key_file" >> "$ssh_config_file"
-        echo "   UserKnownHostsFile=/dev/null" >> "$ssh_config_file"
-        echo "   StrictHostKeyChecking no" >> "$ssh_config_file"
-        echo "   PasswordAuthentication no" >> "$ssh_config_file"
-        echo "   ProxyJump $bastion_host" >> "$ssh_config_file"
-        echo "$node" >> "$inventory_file"
+main() {
+    active_servers=$(openstack server list --status ACTIVE -f value -c Name | grep -oP "${nodes}([1-9]+)" | sort)
+
+    for server in $active_servers; do
+        ip_address=$(openstack server list --name "$server" -c Networks -f value | grep -Po '\d+\.\d+\.\d+\.\d+')
+        echo " " >> "$sshconfig"
+        echo "Host $server" >> "$sshconfig"
+        echo "   User ubuntu" >> "$sshconfig"
+        echo "   HostName $ip_address" >> "$sshconfig"
+        echo "   IdentityFile $PWD/$1" >> "$sshconfig"
+        echo "   UserKnownHostsFile=~/dev/null" >> "$sshconfig"
+        echo "   StrictHostKeyChecking no" >> "$sshconfig"
+        echo "   PasswordAuthentication no" >> "$sshconfig"
+        echo "   ProxyJump $bastion" >> "$sshconfig"
+        echo "$server" >> "$inventory_file"
     done
 
-    load_balancer1_fixed_ip=$(openstack server show "$load_balancer1" -c addresses | grep -Po '\d+\.\d+\.\d+\.\d+' | awk 'NR==1')
-    load_balancer2_fixed_ip=$(openstack server show "$load_balancer2" -c addresses | grep -Po '\d+\.\d+\.\d+\.\d+' | awk 'NR==1')
+    HAPfixedip1=$(openstack server show "$proxy1" -c addresses | grep -Po '\d+\.\d+\.\d+\.\d+' | awk 'NR==1')
+    HAPfixedip2=$(openstack server show "$proxy2" -c addresses | grep -Po '\d+\.\d+\.\d+\.\d+' | awk 'NR==1')
 
-    echo "$(date) Generating SSH config file"
-    echo "Host $bastion_host" >> "$ssh_config_file"
-    echo "   User ubuntu" >> "$ssh_config_file"
-    echo "   HostName $bastion_floating_ip" >> "$ssh_config_file"
-    echo "   IdentityFile $PWD/$ssh_key_file" >> "$ssh_config_file"
-    echo "   UserKnownHostsFile /dev/null" >> "$ssh_config_file"
-    echo "   StrictHostKeyChecking no" >> "$ssh_config_file"
-    echo "   PasswordAuthentication no" >> "$ssh_config_file"
+    echo "$(date) Generating config file"
+    {
+        echo "Host $bastion"
+        echo "   User ubuntu"
+        echo "   HostName $f1"
+        echo "   IdentityFile $PWD/$1"
+        echo "   UserKnownHostsFile /dev/null"
+        echo "   StrictHostKeyChecking no"
+        echo "   PasswordAuthentication no"
+    } >> "$sshconfig"
 
-    echo " " >> "$ssh_config_file"
-    echo "Host $load_balancer1" >> "$ssh_config_file"
-    echo "   User ubuntu" >> "$ssh_config_file"
-    echo "   HostName $load_balancer1_fixed_ip" >> "$ssh_config_file"
-    echo "   IdentityFile $PWD/$ssh_key_file" >> "$ssh_config_file"
-    echo "   StrictHostKeyChecking no" >> "$ssh_config_file"
-    echo "   PasswordAuthentication no" >> "$ssh_config_file"
-    echo "   ProxyJump $bastion_host" >> "$ssh_config_file"
+    {
+        echo " "
+        echo "Host $proxy1"
+        echo "   User ubuntu"
+        echo "   HostName $HAPfixedip1"
+        echo "   IdentityFile $PWD/$1"
+        echo "   StrictHostKeyChecking no"
+        echo "   PasswordAuthentication no"
+        echo "   ProxyJump $bastion"
+    } >> "$sshconfig"
 
-    echo " " >> "$ssh_config_file"
-    echo "Host $load_balancer2" >> "$ssh_config_file"
-    echo "   User ubuntu" >> "$ssh_config_file"
-    echo "   HostName $load_balancer2_fixed_ip" >> "$ssh_config_file"
-    echo "   IdentityFile $PWD/$ssh_key_file" >> "$ssh_config_file"
-    echo "   StrictHostKeyChecking no" >> "$ssh_config_file"
-    echo "   PasswordAuthentication no" >> "$ssh_config_file"
-    echo "   ProxyJump $bastion_host" >> "$ssh_config_file"
+    {
+        echo " "
+        echo "Host $proxy2"
+        echo "   User ubuntu"
+        echo "   HostName $HAPfixedip2"
+        echo "   IdentityFile $PWD/$1"
+        echo "   StrictHostKeyChecking no"
+        echo "   PasswordAuthentication no"
+        echo "   ProxyJump $bastion"
+    } >> "$sshconfig"
 
-    echo "$(date) Generating inventory file"
-    echo "[bastion]" >> "$inventory_file"
-    echo "$bastion_host" >> "$inventory_file"
-    echo " " >> "$inventory_file"
-    echo "[HAproxy]" >> "$inventory_file"
-    echo "$load_balancer1" >> "$inventory_file"
-    echo "$load_balancer2" >> "$inventory_file"
-    echo " " >> "$inventory_file"
-    echo " " >> "$inventory_file"
-    echo "[primary_proxy]" >> "$inventory_file"
-    echo "$load_balancer1" >> "$inventory_file"
-    echo " " >> "$inventory_file"
-    echo "[backup_proxy]" >> "$inventory_file"
-    echo "$load_balancer2" >> "$inventory_file"
-    echo " " >> "$inventory_file"
-    echo "[all:vars]" >> "$inventory_file"
-    echo "ansible_user=ubuntu" >> "$inventory_file"
-    echo "ansible_ssh_common_args=\"-F $ssh_config_file\"" >> "$inventory_file"
+    echo "$(date) Generating hosts file"
+    {
+        echo "[bastion]"
+        echo "$bastion"
+        echo " "
+        echo "[HAproxy]"
+        echo "$proxy1"
+        echo "$proxy2"
+        echo " "
+        echo "[primary_proxy]"
+        echo "$proxy1"
+        echo " "
+        echo "[backup_proxy]"
+        echo "$proxy2"
+        echo " "
+        echo "[all:vars]"
+        echo "ansible_user=ubuntu"
+        echo "ansible_ssh_common_args=\"-F $sshconfig\""
+    } >> "$inventory_file"
 }
 
-# Main loop for operations phase
-while true; do
-    desired_node_count=$(cat servers.conf)
-    echo "$(date) Total desired number of servers: $desired_node_count"
+while true
+do
+    wantednodes=$(cat servers.conf)
+    echo "$(date) We need $wantednodes server(s) in total"
 
-    active_nodes=$(openstack server list --status ACTIVE --column Name -f value)
-    active_node_count=$(grep -c "$web_nodes" <<< "$active_nodes")
-    echo "$(date) Number of active nodes: $active_node_count"
+    nodeslist=$(openstack server list --status ACTIVE --column Name -f value)
+    nodespresent=$(grep -c "$nodes" <<< "$nodeslist")
+    echo "$(date) There are $nodespresent server(s) already present"
+    totalservers=$(openstack server list --column Name -f value)
+    totalnodes=$(grep -c "$nodes" <<< "$totalservers")
 
-    all_servers=$(openstack server list --column Name -f value)
-    total_node_count=$(grep -c "$web_nodes" <<< "$all_servers")
-
-    if ((desired_node_count > active_node_count)); then
-        [[ -f "$ssh_config_file" ]] && rm "$ssh_config_file"
+    if ((wantednodes > nodespresent)); then
+        # Clean up existing files
+        [[ -f "$sshconfig" ]] && rm "$sshconfig"
         [[ -f "$known_hosts_file" ]] && rm "$known_hosts_file"
         [[ -f "$inventory_file" ]] && rm "$inventory_file"
-
-        nodes_to_add=$((desired_node_count - active_node_count))
-        echo "$(date) Adding $nodes_to_add nodes"
+        nodes_to_add=$((wantednodes - nodespresent))
+        echo "$(date) $nodes_to_add server(s) are to be added"
         echo "[webservers]" >> "$inventory_file"
-
         for ((i=0; i<nodes_to_add; i++)); do
-            node_number=$(("$node_count" + 1))
-            node_name=${web_nodes}${node_number}
-            openstack server create --image "Ubuntu 20.04 Focal Fossa x86_64" "$node_name" --key-name "$keypair_name" --flavor "1C-2GB-50GB" --network "$network_name" --security-group "$security_group_name"
-            node_count=$(("$node_count" + 1))
-            echo "$(date) Waiting for server $node_name to become active"
+            a=$((count_nodes+1))
+            nodes_name=${nodes}${a}
+            server_create=$(openstack server create --image "Ubuntu 20.04 Focal Fossa x86_64" "$nodes_name" --key-name "$keypair" --flavor "1C-2GB-50GB" --network "$network" --security-group "$securitygroup")
+            count_nodes=$((count_nodes+1))
+            echo "$(date) Waiting for the server to become active"
             server_status=""
-            while [[ "$server_status" != "ACTIVE" ]]; do
-                sleep 30
-                server_status=$(openstack server show "$node_name" -c status -f value)
+            while [ "$server_status" != "ACTIVE" ]; do
+                sleep 5
+                server_status=$(openstack server show "$nodes_name" -c status -f value)
             done
-            echo "$(date) Server $node_name is active"
+            echo "$(date) Server $nodes_name is active"
         done
+        no_of_nodes=$(openstack server list | grep "$nodes" | wc -l)
+        echo "$no_of_nodes" > node_count.txt
 
-        openstack server list | grep "$web_nodes" | wc -l > node_count.txt
-        echo "$(date) $nodes_to_add nodes added"
-        configure_web_nodes "$ssh_key_name"
-        echo "$(date) Initializing Ansible playbook"
-        sleep 5
-        ansible-playbook -i hosts --user='root' --ssh-extra-args='-p 22 -o ConnectionAttempts=20 -o StrictHostKeyChecking=no' operate_configure.yaml
+        echo "$(date) Required number of servers $nodes_to_add created"
+        main "$ssh_private"
+        echo "$(date) Initializing ansible-playbook"
+	sleep 5
+        ansible-playbook -i hosts -u 'root' --ssh-extra-args='-p 22 -o ConnectionAttempts=10 -o StrictHostKeyChecking=no' site.yaml
 
-    elif ((desired_node_count < active_node_count)); then
-        [[ -f "$ssh_config_file" ]] && rm "$ssh_config_file"
+    elif ((wantednodes < nodespresent)); then
+        # Clean up existing files
+        [[ -f "$sshconfig" ]] && rm "$sshconfig"
         [[ -f "$known_hosts_file" ]] && rm "$known_hosts_file"
         [[ -f "$inventory_file" ]] && rm "$inventory_file"
-
-        nodes_to_remove=$((active_node_count - desired_node_count))
-        echo "$(date) Removing $nodes_to_remove nodes"
+        nodes_to_delete=$((nodespresent - wantednodes))
+        echo "$(date) $nodes_to_delete servers are to be deleted"
         stop=0
 
-        if ((nodes_to_remove > stop)); then
+        if ((nodes_to_delete > stop)); then
             echo "[webservers]" >> "$inventory_file"
-            for ((i=nodes_to_remove; i>0; i--)); do
-                node_to_remove=$(openstack server list --status ACTIVE -f value -c Name | grep -m1 -oP "$resource_tag"'_dev([1-9]+)')
-                openstack server delete "$node_to_remove" --wait
-                sleep 8
+            for ((i=nodes_to_delete; i>0; i--)); do
+                server_delete=$(openstack server list --status ACTIVE -f value -c Name | grep -m1 -oP "${tag}_dev([1-9]+)")
+                serveremove=$(openstack server delete "$server_delete" --wait)
+                sleep 5
             done
-            openstack server list | grep "$web_nodes" | wc -l > node_count.txt
-            echo "$(date) $nodes_to_remove nodes removed"
-            sleep 3
-            configure_web_nodes "$ssh_key_name"
-            echo "$(date) Initializing Ansible playbook"
-            sleep 5
-            ansible-playbook -i hosts --user='root' --ssh-extra-args='-p 22 -o ConnectionAttempts=20 -o StrictHostKeyChecking=no' operate_configure.yaml
+            no_of_nodes=$(openstack server list | grep "$nodes" | wc -l)
+            echo "$no_of_nodes" > node_count.txt
+            echo "$(date) $nodes_to_delete servers deleted"
+            main "$ssh_private"
+            #echo "$(date) Initialising ansible-playbook"
+	    sleep 5
+            #ansible-playbook -i hosts -u 'root' --ssh-extra-args='-p 22 -o ConnectionAttempts=10 -o StrictHostKeyChecking=no' site.yaml
         fi
     else
-        echo "$(date) Desired number of servers ($desired_node_count) already present"
+        echo "$(date) Required number of servers $wantednodes are already present"
     fi
 
-    echo "$(date) Entering sleep mode"
+    # Check if HAproxy1 and HAproxy2 servers are paused
+    if [[ "$(openstack server show "$proxy1" -f value -c status)" == "PAUSED" ]]; then
+        echo "$(date) HAproxy1 server ($proxy1) is PAUSED."
+    fi
+    if [[ "$(openstack server show "$proxy2" -f value -c status)" == "PAUSED" ]]; then
+        echo "$(date) HAproxy2 server ($proxy2) is PAUSED."
+    fi
+
+    echo "Entering sleep mode"
     sleep 30
 done
