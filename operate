@@ -7,7 +7,7 @@ ssh_public=$3
 ssh_private=${ssh_public%.pub}
 
 source "$openrc"
-chmod 600 "$ssh_private"
+chmod 600 "$ssh_public"
 chmod 600 "$ssh_private"
 
 echo "$(date) Starting the operate sequence"
