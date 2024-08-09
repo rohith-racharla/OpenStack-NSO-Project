@@ -12,7 +12,7 @@
   become_method: sudo
   gather_facts: true
   tasks:
-    - name: Updating all webservers 
+    - name: Update all webservers 
       apt:
         update_cache: true
 
@@ -49,7 +49,7 @@
       apt:
         update_cache: true
 
-    - name: copy flask app 
+    - name: Copy flask app 
       copy:
         src: /$PWD/service.py
         dest: /home/ubuntu/app.py
@@ -67,8 +67,8 @@
 
     - name: Configure snmpd
       template:
-             src: snmpd.conf
-             dest: /etc/snmp/snmpd.conf
+              src: snmpd.conf
+              dest: /etc/snmp/snmpd.conf
 
     - name: Restarting snmpd
       service:
@@ -88,7 +88,7 @@
       apt:
         update_cache: yes
 
-    - name: Installing HAproxy(LoadBalancer)
+    - name: Installing HAPROXY(LoadBalancer)
       apt:
         name: haproxy
         state: present
@@ -127,7 +127,7 @@
 
     - name: Configure udp for loadbalancing
       template:
-             src: nginxload.conf
+             src: nginx.conf.j2
              dest: /etc/nginx/nginx.conf
 
     - name: Restart Nginx
@@ -138,7 +138,7 @@
       apt:
         update_cache: true
 
-    - name: Restart keepalived
+    - name: Restart Keepalived
       service:
             name: keepalived
             state: restarted
@@ -154,7 +154,7 @@
     node_priority: 101
     virtual_ip: "{{ lookup('file', './vipaddr') }}"
   tasks:
-    - name: Configure keepalived
+    - name: configure keepalived
       template:
         src: keepalived.conf.j2
         dest: /etc/keepalived/keepalived.conf
@@ -168,7 +168,7 @@
     node_priority: 100
     virtual_ip: "{{ lookup('file', './vipaddr') }}"
   tasks:
-    - name: Configure keepalived
+    - name: configure keepalived
       template:
         src: keepalived.conf.j2
         dest: /etc/keepalived/keepalived.conf
@@ -177,7 +177,7 @@
   hosts: HAproxy
   become: yes
   tasks:
-    - name: Ensure keepalived service is running
+    - name: Ensure Keepalived service is running
       systemd:
         name: keepalived
         enabled: yes
@@ -201,7 +201,7 @@
       become: yes
       shell: while sudo fuser /var/lib/dpkg/lock >/dev/null 2>&1; do sleep 5; done;
  
-    - name: gather server ip addresses
+    - name: Gather server ip addresses
       setup:
           filter: ansible_default_ipv4.address     
 
@@ -214,7 +214,7 @@
     - name: Install and Configure Requirements
       command: bash bastionconfiguration.sh
 
-    - name: copy prometheus.yml
+    - name: Copy prometheus.yml
       template:
         src: "prometheus.yml.j2"
         dest: "/etc/prometheus/prometheus.yml"
@@ -224,14 +224,13 @@
         name: prometheus
         state: restarted 
 
-
-- name: Install node exporter on nodes
+- name: Install Node exporter on nodes
   hosts: webservers
   gather_facts: yes
   become: true
   tasks:
   
-    - name: Gather server ip addresses
+    - name: gather server ip addresses
       setup:
             filter: ansible_default_ipv4.address
 
@@ -241,9 +240,9 @@
 
     - name: Initializing Requirements
       copy:
-        src: "nodeconfigure.sh"
-        dest: "nodeconfigure.sh"
+        src: "node_exporter.sh"
+        dest: "node_exporter.sh"
         mode: '0755'
     
     - name: Install and Configure Requirements
-      command: bash nodeconfigure.sh
+      command: bash node_exporter.sh
