@@ -10,8 +10,8 @@ node_count=3
 source "$openrc"
 
 #Setting required permissions
-chmod 600 "$ssh_public"
-chmod 600 "$ssh_private"
+sudo chmod 600 "$ssh_public"
+sudo chmod 600 "$ssh_private"
 #chmod 600 "$openrc"
 
 echo "$(date) Starting deployment of $tag using $openrc for credentials"
