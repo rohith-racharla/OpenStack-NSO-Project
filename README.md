@@ -6,9 +6,19 @@ First, we need to generate an SSH key by executing  "ssh-keygen -t rsa".
 
 The second step involves creating an "openrc" file within OpenStack users, copying and pasting its contents into Ubuntu,Before pasting, simply update the password you created for the openrc file and put that password in the openrc file and running the following commands for proper configuration: 
 
-```bash
 #chmod 600 openrc 
 #source openrc
 #openstack token
 
 ## To run the code, follow these commands:
+a. Set executable permissions for the "install" script and call this stage by:
+chmod +x install
+./install <openrc> <tag> <ssh_key>
+
+b. Set executable permissions for the "operate" script and call this stage by:
+chmod +x operate
+./operate <openrc> <tag> <ssh_key>
+
+c. c. Lastly, ensure executable permissions for the "cleanup" script and call this stage by:
+chmod +x cleanup
+./cleanup <openrc> <tag> <ssh_key>
