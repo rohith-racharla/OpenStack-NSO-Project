@@ -6,7 +6,7 @@ ssh_public=$3
 node_count=3
 
 source "$openrc" || { printf "Failed to source openrc file\n" >&2; exit 1; }
-chmod 600 "$ssh_public" || { printf "Failed to set permissions for SSH public key\n" >&2; exit 1; }
+sudo chmod 600 "$ssh_public" || { printf "Failed to set permissions for SSH public key\n" >&2; exit 1; }
 
 echo "$(date) Initialising Cleanup"
 
