@@ -31,4 +31,9 @@ chmod +x operate
 chmod +x cleanup
 ./cleanup <openrc> <tag> <ssh_key>
 ```
+### The command to execute Apache Benchmark tool which is used to evaluate request performance is:
 
+```bash
+ ab -n 1 -c 1 http://HAproxy_ipaddress:port(5000)/
+```
+here "n" is no of users/requests per sec and "c" is concurrency.
