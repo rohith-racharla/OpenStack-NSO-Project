@@ -4,10 +4,11 @@ This project involves the deployment and operation of a service within an OpenSt
 
 First, we need to generate an SSH key by executing  "ssh-keygen -t rsa".
 
-The second step involves creating an "openrc" file within OpenStack users, copying and pasting its contents into Ubuntu,Before pasting, simply update the password you created for the openrc file and put that password in the openrc file and running the following commands for proper configuration: 
+The second step involves creating an "openrc" file within OpenStack users, copying and pasting its contents into Ubuntu,Before pasting, simply update the password you created for the openrc file and put that password in the openrc file and running the following commands for proper configuration, also set permissions to keypair: 
 
 ```bash
-chmod 600 openrc 
+chmod 600 <openrc>
+chmod 600 <ssh_key> <ssh_key.pub>
 source openrc
 openstack token
 ```
