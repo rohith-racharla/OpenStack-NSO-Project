@@ -34,6 +34,6 @@ chmod +x cleanup
 ### The command to execute Apache Benchmark tool which is used to evaluate request performance is:
 
 ```bash
- ab -n 1 -c 1 http://HAproxy_ipaddress:port(5000)/
+ ab -n <value> -c <value> http://HAproxy_ipaddress:port(5000)/
 ```
-here "n" is no of users/requests per sec and "c" is concurrency.
+here "n" is the total number of requests to perform and "c" is the concurrency level.
