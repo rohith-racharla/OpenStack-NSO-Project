@@ -10,7 +10,7 @@ The second step involves creating an "openrc" file within OpenStack users, copyi
 chmod 600 <openrc>
 chmod 600 <ssh_key> <ssh_key.pub>
 source openrc
-openstack token
+openstack token issue
 ```
 
 
