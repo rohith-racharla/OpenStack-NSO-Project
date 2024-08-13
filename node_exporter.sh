@@ -51,9 +51,9 @@ ExecStart=/usr/local/bin/node_exporter
 WantedBy=multi-user.target
 EOL
 
-sudo systemctl daemon-reload &
-sudo systemctl enable node_exporter &
-sudo systemctl start node_exporter &
-sudo ufw allow 9100/udp &
+sudo systemctl daemon-reload
+sudo systemctl enable node_exporter
+sudo systemctl start node_exporter
+sudo ufw allow 9100/udp
 
 echo "Node Exporter setup completed."
